@@ -258,7 +258,7 @@ details .inner{margin-top:10px}
     <div>
       <section class="panel">
         <h2>乘車板 <span class="tag">GET /cars</span><button type="button" class="btn sm" id="shareBtn" style="margin-left:auto">複製分享連結</button></h2>
-        <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依車的順序補位。深琥珀是駕駛，亮琥珀是乘客。車的順序可以按「排前面」調，要改回覆到下方「所有回覆」按編輯。</p>
+        <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依車的順序補位。深琥珀是駕駛，亮琥珀是乘客。要改回覆到下方「所有回覆」按編輯。</p>
         <div class="cars" id="cars"></div>
       </section>
 
@@ -320,6 +320,7 @@ const POLL_MS = 10000;
   const esc = (s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const ROLE_LABEL = {driver:'出車', passenger:'搭車', undecided:'未定'};
   const hasApi = /^https:\/\/script\.google\.com\//.test(API_URL);
+  const ADMIN = /[?&]admin=1/.test(location.search); // 主辦人：網址加 ?admin=1 才看得到調車序的按鈕
 
   // ---- state ----
   const state = { entries:{}, ideas:{}, meta:{} };
@@ -648,7 +649,7 @@ const POLL_MS = 10000;
         const hovOk = occ>=3;
         const d = c.driver;
         return `<div class="car">
-          <div class="head"><div class="name">${esc(d.name)} 的車</div><div class="cap">${occ}/${seatsN} <button type="button" class="btn sm" data-front="${esc(d.id)}" title="把這台車排到第一台">排前面</button></div></div>
+          <div class="head"><div class="name">${esc(d.name)} 的車</div><div class="cap">${occ}/${seatsN} ${ADMIN?`<button type="button" class="btn sm" data-front="${esc(d.id)}" title="把這台車排到第一台">排前面</button>`:''}</div></div>
           <div class="small muted" style="overflow-wrap:anywhere">${esc(d.car||'')}${d.from?(d.car?' · ':'')+esc(d.from)+' 出發':''}</div>
           <div class="bar"><i class="drv" style="width:${pct}%"></i><i class="rid" style="width:${pct*c.riders.length}%"></i></div>
           <div class="row"><span class="badge ${hovOk?'ok':'warn'}">${hovOk?'高乘載 OK':'高乘載差 '+(3-occ)+' 人'}</span>${c.riders.length>=c.cap?'<span class="badge bad">FULL</span>':''}</div>
