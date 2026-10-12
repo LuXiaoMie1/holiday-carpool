@@ -385,7 +385,7 @@ const POLL_MS = 10000;
 
   function updateBanner(){
     const b = $('#modeBanner');
-    if(mode==='api'){ b.hidden = true; $('#copyBtn').hidden = true; return; }
+    if(mode==='api'){ b.hidden = true; $('#copyBtn').hidden = true; $('#shareBtn').hidden = true; $('#importDetails').closest('.panel').hidden = true; return; }
     b.hidden = false; b.className = 'banner'; $('#copyBtn').hidden = false;
     b.textContent = '目前資料只存在這台裝置的瀏覽器（主辦人自己填全部的話這樣就夠用）。要讓大家各自在手機上填，再照 README 接上 Google 試算表後端。';
   }
