@@ -6,27 +6,17 @@
 <title>連假出遊乘車調度</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: 高速公路調度站——左側「我的回覆」表單，右側乘車板與行程板；手機寬度疊成一欄 */
+/* Layout: 車用儀表板——左側「填回覆」表單，右側乘車板與兩天時間軸；手機寬度疊成一欄。單一深色主題。 */
 :root{
-  --bg:#f3f4f0; --panel:#ffffff; --fg:#1b2a22; --muted:#5f6f66; --line:#d7dcd6;
-  --accent:#117a46; --accent-ink:#ffffff; --accent-soft:#e2f2e8;
-  --warn:#c98a00; --warn-soft:#fff3d1; --bad:#c23a2b; --bad-soft:#fde3df; --ok:#117a46;
-  --sign:#0b5d35; --sign-ink:#f6fbf7;
+  --bg:#0d0f12; --panel:#15181d; --fg:#ebe7dc; --muted:#8c9198; --line:#262b33;
+  --accent:#f0a93a; --accent-ink:#1a1204; --accent-soft:#3a2b0f;
+  --warn:#f7c948; --warn-soft:#3b3110; --bad:#ff6b57; --bad-soft:#44201b; --ok:#4cc38a;
+  --sign:#15181d; --sign-ink:#f0a93a;
   --display:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
   --body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  color-scheme:light;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#121a16; --panel:#1a2420; --fg:#e6ede8; --muted:#9fb0a6; --line:#2d3b34;
-  --accent:#3fbf7a; --accent-ink:#0b1510; --accent-soft:#1d3528;
-  --warn:#e8b64a; --warn-soft:#3a2f12; --bad:#f07d6e; --bad-soft:#44201b; --ok:#3fbf7a;
-  --sign:#0f4a2d; --sign-ink:#f6fbf7; color-scheme:dark } }
-:root[data-theme="dark"]{
-  --bg:#121a16; --panel:#1a2420; --fg:#e6ede8; --muted:#9fb0a6; --line:#2d3b34;
-  --accent:#3fbf7a; --accent-ink:#0b1510; --accent-soft:#1d3528;
-  --warn:#e8b64a; --warn-soft:#3a2f12; --bad:#f07d6e; --bad-soft:#44201b; --ok:#3fbf7a;
-  --sign:#0f4a2d; --sign-ink:#f6fbf7; color-scheme:dark }
 
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -42,13 +32,13 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .muted{color:var(--muted)}
 .small{font-size:.85rem}
 
-.sign{background:var(--sign);color:var(--sign-ink);border-radius:10px;padding:18px 20px;border:3px solid #ffffff55;box-shadow:inset 0 0 0 2px var(--sign);display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end}
-.sign h1{font-size:clamp(1.5rem,3.6vw,2.3rem);font-weight:900;line-height:1.15;letter-spacing:.01em}
-.sign .sub{font-family:var(--mono);font-size:.8rem;opacity:.85;margin-top:4px}
+.sign{background:linear-gradient(180deg,#1a1e24,#121519);color:var(--fg);border-radius:10px;padding:18px 20px;border:1px solid var(--line);border-top:3px solid var(--accent);display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end}
+.sign h1{font-size:clamp(1.5rem,3.6vw,2.3rem);font-weight:900;line-height:1.15;letter-spacing:.01em;color:var(--sign-ink)}
+.sign .sub{font-family:var(--mono);font-size:.8rem;color:var(--muted);margin-top:4px}
 .sign .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto}
-.sign input{background:#ffffff1a;border:1px solid #ffffff55;color:var(--sign-ink);border-radius:6px;padding:6px 10px;min-width:0}
-.sign input::placeholder{color:#ffffff99}
-.sign label{font-size:.75rem;opacity:.85;display:block;margin-bottom:2px}
+.sign input{background:var(--bg);border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:6px 10px;min-width:0}
+.sign input::placeholder{color:var(--muted)}
+.sign label{font-size:.72rem;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:2px}
 
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
@@ -105,7 +95,7 @@ textarea{resize:vertical;min-height:60px}
 .car .cap{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
 .bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex}
 .bar i{display:block;height:100%}
-.bar .drv{background:var(--sign)}
+.bar .drv{background:#c7862a}
 .bar .rid{background:var(--accent)}
 .seats{display:flex;flex-direction:column;gap:4px;font-size:.88rem}
 .seat{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:6px;background:var(--panel);border:1px solid var(--line);min-width:0}
@@ -116,17 +106,33 @@ textarea{resize:vertical;min-height:60px}
 .badge.ok{color:var(--ok)} .badge.warn{color:var(--warn)} .badge.bad{color:var(--bad)}
 .empty-state{color:var(--muted);font-size:.9rem;padding:14px;border:1px dashed var(--line);border-radius:8px;text-align:center}
 
+.idea-form{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;align-items:center}
+.idea-form input[type=text]{flex:1 1 220px}
+.idea-form select,.idea-form input[type=time]{width:auto;flex:0 0 auto}
+.timeline{display:flex;flex-direction:column;gap:14px;margin-bottom:16px}
+.tl-day{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;align-items:start}
+.tl-label{font-weight:900;font-size:.9rem;padding-top:22px}
+.tl-label small{display:block;font-family:var(--mono);font-weight:400;font-size:.68rem;color:var(--muted)}
+.tl-scroll{overflow-x:auto;min-width:0}
+.tl-track{position:relative;min-width:620px;height:calc(22px + var(--lanes,1)*34px + 6px);background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.tl-tick{position:absolute;top:0;bottom:0;border-left:1px dashed var(--line)}
+.tl-tick span{position:absolute;top:3px;left:4px;font-family:var(--mono);font-size:.66rem;color:var(--muted)}
+.tl-block{position:absolute;height:30px;border-radius:5px;padding:0 8px;display:flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;color:var(--fg);background:color-mix(in srgb,var(--accent) var(--heat,40%),var(--panel));border:1px solid color-mix(in srgb,var(--accent) 70%,transparent);cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+.tl-block.on{outline:2px solid var(--accent);outline-offset:1px}
+.tl-block .n{font-family:var(--mono);font-weight:400;font-size:.7rem;opacity:.85;flex:0 0 auto}
+.tl-block.c-吃{border-color:#e07a5f}.tl-block.c-住宿{border-color:#8fb3ff}.tl-block.c-活動{border-color:#4cc38a}.tl-block.c-景點{border-color:var(--accent)}.tl-block.c-其他{border-color:var(--muted)}
+.tl-empty{position:absolute;inset:22px 0 0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.8rem}
 .ideas{display:flex;flex-direction:column;gap:8px}
+.ideas-h{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-top:4px}
 .idea{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0}
 .idea .vote{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:.85rem;display:flex;flex-direction:column;align-items:center;min-width:48px}
 .idea .vote.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .idea .body{flex:1;min-width:0}
 .idea .text{font-weight:500;overflow-wrap:anywhere}
 .idea .by{font-size:.78rem;color:var(--muted)}
+.idea .sched{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center}
+.idea .sched select,.idea .sched input{width:auto;padding:3px 6px;font-size:.78rem;background:var(--panel)}
 .cat{font-family:var(--mono);font-size:.68rem;border-radius:4px;padding:1px 5px;background:var(--accent-soft);color:var(--fg);margin-right:6px}
-.idea-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;margin-bottom:12px}
-@media (max-width:520px){.idea-form{grid-template-columns:minmax(0,1fr)}}
-
 .tablewrap{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:.86rem}
 th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -252,24 +258,40 @@ details .inner{margin-top:10px}
     <div>
       <section class="panel">
         <h2>乘車板 <span class="tag">GET /cars</span><button type="button" class="btn sm" id="shareBtn" style="margin-left:auto">複製分享連結</button></h2>
-        <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依出車順序補位。深綠是駕駛，綠色是乘客。要改就回左邊重送一次。</p>
+        <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依車的順序補位。深琥珀是駕駛，亮琥珀是乘客。車的順序可以按「排前面」調，要改回覆到下方「所有回覆」按編輯。</p>
         <div class="cars" id="cars"></div>
       </section>
 
       <section class="panel">
-        <h2>行程提案 <span class="tag">GET /ideas</span></h2>
-        <p class="small muted" style="margin:0 0 10px">景點、吃的、活動、住宿都丟上來，大家投票。票數高的自動排前面。</p>
+        <h2>行程時間軸 <span class="tag">GET /ideas</span></h2>
+        <p class="small muted" style="margin:0 0 10px">提案時選第幾天＋幾點就直接排進時間軸，沒選的留在候選區。點時間軸上的格子＝投一票，票越多顏色越亮；每一項的天數與時間下面都能改。</p>
         <form class="idea-form" id="ideaForm" autocomplete="off">
           <input id="ideaText" type="text" placeholder="例：礁溪泡湯、羅東夜市吃包心粉圓" maxlength="80" required>
-          <select id="ideaCat">
+          <select id="ideaCat" title="分類">
             <option value="景點">景點</option>
             <option value="吃">吃</option>
             <option value="活動">活動</option>
             <option value="住宿">住宿</option>
             <option value="其他">其他</option>
           </select>
+          <select id="ideaDay" title="第幾天">
+            <option value="0">還沒排</option>
+            <option value="1">第一天</option>
+            <option value="2">第二天</option>
+          </select>
+          <input id="ideaStart" type="time" step="900" title="開始時間">
+          <select id="ideaDur" title="停留多久">
+            <option value="0.5">30 分</option>
+            <option value="1">1 小時</option>
+            <option value="1.5" selected>1.5 小時</option>
+            <option value="2">2 小時</option>
+            <option value="3">3 小時</option>
+            <option value="4">4 小時</option>
+            <option value="6">6 小時</option>
+          </select>
           <button type="submit" class="btn primary">提案</button>
         </form>
+        <div class="timeline" id="timeline"></div>
         <div class="ideas" id="ideas"></div>
       </section>
 
@@ -506,7 +528,8 @@ const POLL_MS = 10000;
   });
 
   // ---- assignment ----
-  function entriesList(){ return Object.entries(state.entries).map(([id,e])=>Object.assign({id}, e)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); }
+  const ord = (e)=>(typeof e.order==='number' ? e.order : (e.createdAt||0));
+  function entriesList(){ return Object.entries(state.entries).map(([id,e])=>Object.assign({id}, e)).sort((a,b)=>ord(a)-ord(b)); }
   // pref 存的是名字；舊資料可能存 entry id，兩種都認
   const norm = (s)=>String(s||'').trim().toLowerCase();
   function prefName(pref){ if(!pref) return ''; const e = state.entries[pref]; return e ? (e.name||'') : String(pref); }
@@ -539,6 +562,58 @@ const POLL_MS = 10000;
     const list = entriesList().filter(e=>e.id!==myEntryId).sort((a,b)=>(a.role==='driver'?0:1)-(b.role==='driver'?0:1));
     $('#nameList').innerHTML = list.map(d=>'<option value="'+esc(d.name)+'">'+(d.role==='driver'?'出車 · '+(d.seats||5)+' 座'+(d.car?' · '+esc(d.car):''):ROLE_LABEL[d.role]||'')+'</option>').join('');
   }
+
+  // ---- 行程時間軸 ----
+  const TL = { t0: 6, t1: 22, days: [[1,'第一天','出發'],[2,'第二天','回程']] };
+  const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'],[2,'2 小時'],[3,'3 小時'],[4,'4 小時'],[6,'6 小時']];
+  const hhmm = (h)=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); };
+  function startHour(i){ const m=/^(\d{1,2}):(\d{2})$/.exec(i.start||''); return m ? (+m[1])+(+m[2])/60 : null; }
+  function renderIdeas(){
+    const me = anonId;
+    const all = Object.entries(state.ideas).map(([id,i])=>Object.assign({id},i));
+    const maxV = Math.max(1, ...all.map(i=>(i.votes||[]).length));
+    const span = TL.t1 - TL.t0;
+    const ticks = []; for(let h=TL.t0; h<=TL.t1; h+=2) ticks.push(`<div class="tl-tick" style="left:${(h-TL.t0)/span*100}%"><span>${String(h).padStart(2,'0')}</span></div>`);
+    $('#timeline').innerHTML = TL.days.map(([d,label,sub])=>{
+      const items = all.filter(i=>+i.day===d && startHour(i)!=null).map(i=>{
+        const st = Math.max(TL.t0, startHour(i)); const en = Math.min(TL.t1, startHour(i) + (+i.dur||1.5));
+        return Object.assign({st, en}, i);
+      }).filter(i=>i.en>i.st).sort((a,b)=>a.st-b.st || b.en-a.en);
+      const laneEnd = [];
+      items.forEach(i=>{ let k = laneEnd.findIndex(e=>e<=i.st); if(k<0){ k=laneEnd.length; laneEnd.push(0); } laneEnd[k]=i.en; i.lane=k; });
+      const blocks = items.map(i=>{
+        const v=(i.votes||[]).length, on=(i.votes||[]).includes(me);
+        const heat = Math.round(25 + 65*Math.min(1, v/maxV));
+        return `<button type="button" class="tl-block c-${esc(i.cat||'其他')} ${on?'on':''}" data-vote="${esc(i.id)}" style="left:${(i.st-TL.t0)/span*100}%;width:${(i.en-i.st)/span*100}%;top:${22+i.lane*34}px;--heat:${heat}%" title="${esc(i.text)} ${hhmm(i.st)}–${hhmm(i.en)}，${v} 票（點一下投票）"><span style="overflow:hidden;text-overflow:ellipsis">${esc(i.text)}</span><span class="n">${v}</span></button>`;
+      }).join('');
+      const lanes = Math.max(1, laneEnd.length);
+      return `<div class="tl-day"><div class="tl-label">${label}<small>${sub}</small></div><div class="tl-scroll"><div class="tl-track" style="--lanes:${lanes}">${ticks.join('')}${blocks || '<div class="tl-empty">還沒有排進來的行程</div>'}</div></div></div>`;
+    }).join('');
+
+    const sorted = all.sort((a,b)=>((b.votes||[]).length-(a.votes||[]).length)||((a.createdAt||0)-(b.createdAt||0)));
+    const row = (i)=>{
+      const v=i.votes||[]; const on=v.includes(me);
+      const dayOpts = [[0,'還沒排'],[1,'第一天'],[2,'第二天']].map(([k,l])=>`<option value="${k}" ${(+i.day||0)===k?'selected':''}>${l}</option>`).join('');
+      const durOpts = DUR_OPTS.map(([k,l])=>`<option value="${k}" ${(+i.dur||1.5)===k?'selected':''}>${l}</option>`).join('');
+      return `<div class="idea"><button type="button" class="vote ${on?'on':''}" data-vote="${esc(i.id)}" aria-pressed="${on}"><span>▲</span><span>${v.length}</span></button>
+        <div class="body"><div class="text"><span class="cat">${esc(i.cat||'其他')}</span>${esc(i.text)}</div>
+        <div class="by">${esc(i.by||'匿名')} 提的${(me===i.anon)?' · <button type="button" class="btn sm" data-delidea="'+esc(i.id)+'">刪除</button>':''}</div>
+        <div class="sched"><select data-ideafield="day" data-id="${esc(i.id)}">${dayOpts}</select><input type="time" step="900" value="${esc(i.start||'')}" data-ideafield="start" data-id="${esc(i.id)}"><select data-ideafield="dur" data-id="${esc(i.id)}">${durOpts}</select></div></div></div>`;
+    };
+    const isSched = (i)=>+i.day>0 && startHour(i)!=null;
+    const scheduled = sorted.filter(isSched), pending = sorted.filter(i=>!isSched(i));
+    $('#ideas').innerHTML = all.length
+      ? (pending.length ? '<div class="ideas-h">候選區（還沒排時間）</div>'+pending.map(row).join('') : '')
+        + (scheduled.length ? '<div class="ideas-h">已排進時間軸</div>'+scheduled.map(row).join('') : '')
+      : '<div class="empty-state">還沒有提案。想去哪、想吃什麼，先丟一個。</div>';
+  }
+  document.addEventListener('change', async (ev)=>{
+    const el = ev.target.closest('[data-ideafield]'); if(!el) return;
+    const i = state.ideas[el.dataset.id]; if(!i) return;
+    const f = el.dataset.ideafield; const val = f==='start' ? el.value : +el.value;
+    if(i[f]===val) return;
+    try{ await writeDoc('ideas', el.dataset.id, Object.assign({}, i, {[f]: val})); }catch(e){ console.error(e); }
+  });
 
   function render(){
     renderPrefOptions();
@@ -573,7 +648,7 @@ const POLL_MS = 10000;
         const hovOk = occ>=3;
         const d = c.driver;
         return `<div class="car">
-          <div class="head"><div class="name">${esc(d.name)} 的車</div><div class="cap">${occ}/${seatsN}</div></div>
+          <div class="head"><div class="name">${esc(d.name)} 的車</div><div class="cap">${occ}/${seatsN} <button type="button" class="btn sm" data-front="${esc(d.id)}" title="把這台車排到第一台">排前面</button></div></div>
           <div class="small muted" style="overflow-wrap:anywhere">${esc(d.car||'')}${d.from?(d.car?' · ':'')+esc(d.from)+' 出發':''}</div>
           <div class="bar"><i class="drv" style="width:${pct}%"></i><i class="rid" style="width:${pct*c.riders.length}%"></i></div>
           <div class="row"><span class="badge ${hovOk?'ok':'warn'}">${hovOk?'高乘載 OK':'高乘載差 '+(3-occ)+' 人'}</span>${c.riders.length>=c.cap?'<span class="badge bad">FULL</span>':''}</div>
@@ -594,13 +669,7 @@ const POLL_MS = 10000;
       carsEl.innerHTML = carHtml + poolHtml;
     }
 
-    const ideas = Object.entries(state.ideas).map(([id,i])=>Object.assign({id},i)).sort((a,b)=>((b.votes||[]).length-(a.votes||[]).length)||((a.createdAt||0)-(b.createdAt||0)));
-    const me = anonId;
-    $('#ideas').innerHTML = ideas.length ? ideas.map(i=>{
-      const v = i.votes||[]; const on = v.includes(me);
-      return `<div class="idea"><button type="button" class="vote ${on?'on':''}" data-vote="${esc(i.id)}" aria-pressed="${on}"><span>▲</span><span>${v.length}</span></button>
-        <div class="body"><div class="text"><span class="cat">${esc(i.cat||'其他')}</span>${esc(i.text)}</div><div class="by">${esc(i.by||'匿名')} 提的${(me===i.anon)?' · <button type="button" class="btn sm" data-delidea="'+esc(i.id)+'">刪除</button>':''}</div></div></div>`;
-    }).join('') : '<div class="empty-state">還沒有提案。想去哪、想吃什麼，先丟一個。</div>';
+    renderIdeas();
 
     $('#entriesTag').textContent = A.all.length+' rows';
     $('#entriesBody').innerHTML = A.all.map(e=>{
@@ -628,6 +697,11 @@ const POLL_MS = 10000;
       try{ await deleteDoc('entries', id); if(myEntryId===id){ myEntryId=null; lsSet('carpool.myEntryId',''); syncRoleFields(); } }
       catch(e){ toast('#formToast','刪不掉：'+(e&&e.message||e),'bad'); }
     }
+    if(b.dataset.front){
+      const e = state.entries[b.dataset.front]; if(!e) return;
+      const minOrd = Math.min(...entriesList().map(ord));
+      try{ await writeDoc('entries', b.dataset.front, Object.assign({}, e, {order: minOrd-1})); }catch(err){ console.error(err); }
+    }
     if(b.dataset.vote){
       const id = b.dataset.vote; const i = state.ideas[id]; if(!i) return;
       const votes = (i.votes||[]).slice();
@@ -645,8 +719,8 @@ const POLL_MS = 10000;
     const text = $('#ideaText').value.trim(); if(!text) return;
     const by = ($('#fName').value.trim()) || ((state.entries[myEntryId]||{}).name) || '匿名';
     try{
-      await writeDoc('ideas', newId('i'), { text, cat: $('#ideaCat').value, by, anon: anonId, votes:[anonId], createdAt: Date.now() });
-      $('#ideaText').value='';
+      await writeDoc('ideas', newId('i'), { text, cat: $('#ideaCat').value, day: +$('#ideaDay').value, start: $('#ideaStart').value||'', dur: +$('#ideaDur').value, by, anon: anonId, votes:[anonId], createdAt: Date.now() });
+      $('#ideaText').value=''; $('#ideaStart').value='';
     }catch(e){ console.error(e); }
   });
 
