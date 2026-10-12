@@ -557,18 +557,18 @@ const POLL_MS = 10000;
   }
 
   // ---- 行程時間軸 ----
-  const TL = { t0: 6, t1: 30, days: [[1,'第一天','出發'],[2,'第二天','回程']] };
+  const TL = { t0: 0, t1: 24, days: [[1,'第一天','出發'],[2,'第二天','回程']] };
   const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'], ...Array.from({length:23},(_,k)=>[k+2,(k+2)+' 小時'])]; // 2～24 每小時一格
   $('#ideaDur').innerHTML = DUR_OPTS.map(([k,l])=>`<option value="${k}" ${k===1.5?'selected':''}>${l}</option>`).join('');
-  const hhmm = (h)=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return (H>=24?'翌日 ':'')+String(H%24).padStart(2,'0')+':'+String(M).padStart(2,'0'); };
-  function startHour(i){ const m=/^(\d{1,2}):(\d{2})$/.exec(i.start||''); if(!m) return null; const h=(+m[1])+(+m[2])/60; return h<TL.t0 ? h+24 : h; } // 早於 06:00 視為當天夜裡延續到隔天凌晨
+  const hhmm = (h)=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); };
+  function startHour(i){ const m=/^(\d{1,2}):(\d{2})$/.exec(i.start||''); return m ? (+m[1])+(+m[2])/60 : null; }
   function renderIdeas(){
     const me = anonId;
     const all = Object.entries(state.ideas).map(([id,i])=>Object.assign({id},i));
     const maxV = Math.max(1, ...all.map(i=>(i.votes||[]).length));
     const span = TL.t1 - TL.t0;
-    const ticks = []; for(let h=TL.t0; h<=TL.t1; h+=2) ticks.push(`<div class="tl-tick" style="left:${(h-TL.t0)/span*100}%"><span>${String(h%24).padStart(2,'0')}</span></div>`);
-    // 每筆拆成當天的格子；超過隔天 06:00（TL.t1）的部分再接一格到下一天軌道（cont=true）
+    const ticks = []; for(let h=TL.t0; h<TL.t1; h+=2) ticks.push(`<div class="tl-tick" style="left:${(h-TL.t0)/span*100}%"><span>${String(h).padStart(2,'0')}</span></div>`);
+    // 每條軌道＝一個日曆日 00–24；超過午夜的部分再接一格到下一天軌道（cont=true）
     const placed = [];
     all.filter(i=>+i.day>0 && startHour(i)!=null).forEach(i=>{
       const s = startHour(i), e = s + (+i.dur||1.5);
