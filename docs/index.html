@@ -280,21 +280,7 @@ details .inner{margin-top:10px}
             <option value="2">第二天</option>
           </select>
           <input id="ideaStart" type="time" step="900" title="開始時間">
-          <select id="ideaDur" title="停留多久">
-            <option value="0.5">30 分</option>
-            <option value="1">1 小時</option>
-            <option value="1.5" selected>1.5 小時</option>
-            <option value="2">2 小時</option>
-            <option value="3">3 小時</option>
-            <option value="4">4 小時</option>
-            <option value="6">6 小時</option>
-            <option value="8">8 小時</option>
-            <option value="12">12 小時</option>
-            <option value="16">16 小時</option>
-            <option value="18">18 小時</option>
-            <option value="20">20 小時</option>
-            <option value="24">24 小時</option>
-          </select>
+          <select id="ideaDur" title="停留多久"></select>
           <button type="submit" class="btn primary">提案</button>
         </form>
         <div class="timeline" id="timeline"></div>
@@ -572,7 +558,8 @@ const POLL_MS = 10000;
 
   // ---- 行程時間軸 ----
   const TL = { t0: 6, t1: 30, days: [[1,'第一天','出發'],[2,'第二天','回程']] };
-  const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'],[2,'2 小時'],[3,'3 小時'],[4,'4 小時'],[6,'6 小時'],[8,'8 小時'],[12,'12 小時'],[16,'16 小時'],[18,'18 小時'],[20,'20 小時'],[24,'24 小時']];
+  const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'], ...Array.from({length:23},(_,k)=>[k+2,(k+2)+' 小時'])]; // 2～24 每小時一格
+  $('#ideaDur').innerHTML = DUR_OPTS.map(([k,l])=>`<option value="${k}" ${k===1.5?'selected':''}>${l}</option>`).join('');
   const hhmm = (h)=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return (H>=24?'翌日 ':'')+String(H%24).padStart(2,'0')+':'+String(M).padStart(2,'0'); };
   function startHour(i){ const m=/^(\d{1,2}):(\d{2})$/.exec(i.start||''); if(!m) return null; const h=(+m[1])+(+m[2])/60; return h<TL.t0 ? h+24 : h; } // 早於 06:00 視為當天夜裡延續到隔天凌晨
   function renderIdeas(){
