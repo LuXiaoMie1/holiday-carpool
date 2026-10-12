@@ -194,8 +194,9 @@ details .inner{margin-top:10px}
           <div id="passengerFields">
             <div class="field">
               <label for="fPref">想搭誰的車</label>
-              <select id="fPref"><option value="">誰有位就上（load balancer 幫你排）</option></select>
-              <span class="hint">還沒有人出車的話先選「誰有位就上」，之後再改。</span>
+              <input id="fPref" type="text" list="nameList" placeholder="輸入名字；留空＝誰有位就上" maxlength="20">
+              <datalist id="nameList"></datalist>
+              <span class="hint">對方還沒填也可以先指定，等他填出車就會自動配上。</span>
             </div>
             <div class="field">
               <label for="fPickup">你在哪裡上車</label>
@@ -221,7 +222,7 @@ details .inner{margin-top:10px}
           </div>
           <div class="row">
             <button type="submit" class="btn primary" id="saveBtn">送出回覆</button>
-            <button type="button" class="btn" id="resetBtn">清空重填</button>
+            <button type="button" class="btn" id="resetBtn">清空（填新的一筆）</button>
             <button type="button" class="btn" id="copyBtn" hidden>複製答案代碼</button>
           </div>
           <div class="toast" id="formToast"></div>
@@ -408,7 +409,7 @@ const POLL_MS = 10000;
       seats: r==='driver' ? Math.max(2, Math.min(9, parseInt($('#fSeats').value,10)||5)) : null,
       car: r==='driver' ? $('#fCar').value.trim() : '',
       from: r==='driver' ? $('#fFrom').value.trim() : '',
-      pref: r==='passenger' ? $('#fPref').value : '',
+      pref: r==='passenger' ? $('#fPref').value.trim() : '',
       pickup: r==='passenger' ? $('#fPickup').value.trim() : '',
       tags: chips,
       note: $('#fNote').value.trim(),
@@ -420,7 +421,7 @@ const POLL_MS = 10000;
     $('#fSeats').value = e.seats||5; $('#fCar').value = e.car||''; $('#fFrom').value = e.from||'';
     $('#fPickup').value = e.pickup||''; $('#fNote').value = e.note||'';
     $('#roleChips').querySelectorAll('input').forEach(i=>{ i.checked = (e.tags||[]).includes(i.value); });
-    renderPrefOptions(); $('#fPref').value = e.pref||'';
+    $('#fPref').value = prefName(e.pref);
     syncRoleFields();
   }
   function toast(sel, msg, cls){ const t=$(sel); t.textContent=msg; t.className='toast '+(cls||''); }
@@ -442,7 +443,7 @@ const POLL_MS = 10000;
       toast('#formToast','存不進去：'+(e&&e.message||e)+'。先用「複製答案代碼」。','bad'); $('#copyBtn').hidden=false; showCode(body, id);
     }finally{ $('#saveBtn').disabled = false; }
   });
-  $('#resetBtn').addEventListener('click', ()=>{ form.reset(); $('#fSeats').value=5; syncRoleFields(); toast('#formToast','',''); $('#codeBox').hidden = true; });
+  $('#resetBtn').addEventListener('click', ()=>{ form.reset(); $('#fSeats').value=5; myEntryId=null; lsSet('carpool.myEntryId',''); syncRoleFields(); toast('#formToast','',''); $('#codeBox').hidden = true; render(); });
   $('#copyBtn').addEventListener('click', ()=>{
     const data = readForm(); if(!data.name){ toast('#formToast','先填名字。','bad'); return; }
     const id = myEntryId || newId('e'); myEntryId = id; lsSet('carpool.myEntryId', id);
@@ -476,34 +477,37 @@ const POLL_MS = 10000;
 
   // ---- assignment ----
   function entriesList(){ return Object.entries(state.entries).map(([id,e])=>Object.assign({id}, e)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); }
+  // pref 存的是名字；舊資料可能存 entry id，兩種都認
+  const norm = (s)=>String(s||'').trim().toLowerCase();
+  function prefName(pref){ if(!pref) return ''; const e = state.entries[pref]; return e ? (e.name||'') : String(pref); }
   function assign(){
     const all = entriesList();
     const drivers = all.filter(e=>e.role==='driver');
     const passengers = all.filter(e=>e.role==='passenger');
     const undecided = all.filter(e=>e.role==='undecided');
     const cars = drivers.map(d=>({ driver:d, riders:[], cap: Math.max(1,(d.seats||5)-1) }));
-    const byId = Object.fromEntries(cars.map(c=>[c.driver.id,c]));
-    const waiting = [];
+    const byName = {}; cars.forEach(c=>{ byName[norm(c.driver.name)] = c; });
+    const known = new Set(all.map(e=>norm(e.name)));
+    const waiting = [], unassigned = [];
     passengers.forEach(p=>{
-      const c = p.pref && byId[p.pref];
-      if(c && c.riders.length < c.cap){ c.riders.push(Object.assign({}, p, {pinned:true})); }
-      else waiting.push(Object.assign({}, p, { reason: p.pref ? (byId[p.pref] ? '指定的車滿了' : '指定的人沒出車') : '' }));
+      const want = prefName(p.pref);
+      if(!want){ waiting.push(p); return; }
+      const c = byName[norm(want)];
+      if(c && c.riders.length < c.cap){ c.riders.push(Object.assign({}, p, {pinned:true, want})); }
+      else if(c){ waiting.push(Object.assign({}, p, { want, reason: want+' 的車滿了' })); }
+      else unassigned.push(Object.assign({}, p, { want, reason: known.has(norm(want)) ? '等 '+want+' 改出車' : '等 '+want+' 來填' }));
     });
-    const unassigned = [];
     waiting.forEach(p=>{
       const c = cars.find(c=>c.riders.length < c.cap);
-      if(c) c.riders.push(p); else unassigned.push(p);
+      if(c) c.riders.push(p); else unassigned.push(Object.assign({}, p, {reason: p.reason||'沒車位了'}));
     });
     return { cars, unassigned, undecided, all, drivers, passengers };
   }
 
   // ---- render ----
   function renderPrefOptions(){
-    const sel = $('#fPref'); const cur = sel.value;
-    const drivers = entriesList().filter(e=>e.role==='driver' && e.id!==myEntryId);
-    sel.innerHTML = '<option value="">誰有位就上（load balancer 幫你排）</option>' +
-      drivers.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'（'+esc(d.car||'車')+'，'+(d.seats||5)+' 座'+(d.from?'，'+esc(d.from)+'出發':'')+'）</option>').join('');
-    if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+    const list = entriesList().filter(e=>e.id!==myEntryId).sort((a,b)=>(a.role==='driver'?0:1)-(b.role==='driver'?0:1));
+    $('#nameList').innerHTML = list.map(d=>'<option value="'+esc(d.name)+'">'+(d.role==='driver'?'出車 · '+(d.seats||5)+' 座'+(d.car?' · '+esc(d.car):''):ROLE_LABEL[d.role]||'')+'</option>').join('');
   }
 
   function render(){
@@ -545,7 +549,7 @@ const POLL_MS = 10000;
           <div class="row"><span class="badge ${hovOk?'ok':'warn'}">${hovOk?'高乘載 OK':'高乘載差 '+(3-occ)+' 人'}</span>${c.riders.length>=c.cap?'<span class="badge bad">FULL</span>':''}</div>
           <div class="seats">
             <div class="seat"><span class="who">🚗 ${esc(d.name)}</span><span class="extra">${esc((d.tags||[]).join('·'))}</span></div>
-            ${c.riders.map(p=>`<div class="seat"><span class="who">${esc(p.name)}</span><span class="extra">${p.pinned?'指定 · ':''}${esc(p.pickup||'')}${p.tags&&p.tags.length?' · '+esc(p.tags.join('·')):''}</span></div>`).join('')}
+            ${c.riders.map(p=>`<div class="seat"><span class="who">${esc(p.name)}</span><span class="extra">${p.pinned?'指定 · ':(p.reason?esc(p.reason)+' · ':'')}${esc(p.pickup||'')}${p.tags&&p.tags.length?' · '+esc(p.tags.join('·')):''}</span></div>`).join('')}
             ${Array.from({length:Math.max(0,c.cap-c.riders.length)}).map(()=>'<div class="seat empty">空位</div>').join('')}
           </div>
         </div>`;
@@ -571,7 +575,7 @@ const POLL_MS = 10000;
     $('#entriesTag').textContent = A.all.length+' rows';
     $('#entriesBody').innerHTML = A.all.map(e=>{
       const detail = e.role==='driver' ? (e.seats||5)+' 座'+(e.car?' · '+esc(e.car):'')+(e.from?' · '+esc(e.from)+'出發':'')
-        : e.role==='passenger' ? (e.pref ? '想搭 '+esc((state.entries[e.pref]||{}).name||'（已不出車）') : '誰有位就上')+(e.pickup?' · '+esc(e.pickup)+'上車':'')
+        : e.role==='passenger' ? (e.pref ? '想搭 '+esc(prefName(e.pref)) : '誰有位就上')+(e.pickup?' · '+esc(e.pickup)+'上車':'')
         : '—';
       return `<tr class="${e.id===myEntryId?'me':''}"><td class="n">${esc(e.name)}</td><td class="n">${ROLE_LABEL[e.role]||e.role}</td><td>${detail}</td><td>${esc((e.tags||[]).join('、'))}</td><td>${esc(e.note||'')}</td>
         <td class="n"><button type="button" class="btn sm" data-edit="${esc(e.id)}">編輯</button> <button type="button" class="btn sm danger" data-del="${esc(e.id)}">刪除</button></td></tr>`;
