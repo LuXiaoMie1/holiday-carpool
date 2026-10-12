@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>連假出遊乘車調度</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: 高速公路調度站——左側「我的回覆」表單，右側乘車板與行程板；手機寬度疊成一欄 */
+:root{
+  --bg:#f3f4f0; --panel:#ffffff; --fg:#1b2a22; --muted:#5f6f66; --line:#d7dcd6;
+  --accent:#117a46; --accent-ink:#ffffff; --accent-soft:#e2f2e8;
+  --warn:#c98a00; --warn-soft:#fff3d1; --bad:#c23a2b; --bad-soft:#fde3df; --ok:#117a46;
+  --sign:#0b5d35; --sign-ink:#f6fbf7;
+  --display:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#121a16; --panel:#1a2420; --fg:#e6ede8; --muted:#9fb0a6; --line:#2d3b34;
+  --accent:#3fbf7a; --accent-ink:#0b1510; --accent-soft:#1d3528;
+  --warn:#e8b64a; --warn-soft:#3a2f12; --bad:#f07d6e; --bad-soft:#44201b; --ok:#3fbf7a;
+  --sign:#0f4a2d; --sign-ink:#f6fbf7; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#121a16; --panel:#1a2420; --fg:#e6ede8; --muted:#9fb0a6; --line:#2d3b34;
+  --accent:#3fbf7a; --accent-ink:#0b1510; --accent-soft:#1d3528;
+  --warn:#e8b64a; --warn-soft:#3a2f12; --bad:#f07d6e; --bad-soft:#44201b; --ok:#3fbf7a;
+  --sign:#0f4a2d; --sign-ink:#f6fbf7; color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 56px;padding-inline:16px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h2{font-size:1.05rem;font-weight:900;letter-spacing:.02em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.chip:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+
+.sign{background:var(--sign);color:var(--sign-ink);border-radius:10px;padding:18px 20px;border:3px solid #ffffff55;box-shadow:inset 0 0 0 2px var(--sign);display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end}
+.sign h1{font-size:clamp(1.5rem,3.6vw,2.3rem);font-weight:900;line-height:1.15;letter-spacing:.01em}
+.sign .sub{font-family:var(--mono);font-size:.8rem;opacity:.85;margin-top:4px}
+.sign .meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.sign input{background:#ffffff1a;border:1px solid #ffffff55;color:var(--sign-ink);border-radius:6px;padding:6px 10px;min-width:0}
+.sign input::placeholder{color:#ffffff99}
+.sign label{font-size:.75rem;opacity:.85;display:block;margin-bottom:2px}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat .k{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--mono);font-size:1.5rem;font-weight:600;line-height:1.2;margin-top:2px}
+.stat .v small{font-size:.8rem;color:var(--muted);font-weight:400}
+.code{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-weight:600;border-radius:6px;padding:4px 10px;font-size:.95rem}
+.code.ok{background:var(--accent-soft);color:var(--ok)}
+.code.warn{background:var(--warn-soft);color:var(--warn)}
+.code.bad{background:var(--bad-soft);color:var(--bad)}
+.banner{margin-top:12px;border-radius:8px;padding:10px 14px;font-size:.9rem;border:1px solid var(--line);background:var(--panel)}
+.banner.warn{border-color:var(--warn);background:var(--warn-soft)}
+.sync{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:8px;display:flex;gap:8px;align-items:center}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--line);display:inline-block}
+.sync.on i{background:var(--ok)} .sync.err i{background:var(--bad)}
+
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;margin-top:18px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.panel + .panel{margin-top:18px}
+.panel h2{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.panel h2 .tag{font-family:var(--mono);font-size:.7rem;font-weight:400;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:.82rem;font-weight:700}
+.field .hint{font-size:.78rem;color:var(--muted)}
+input[type=text],input[type=number],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:60px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}
+.seg label{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;cursor:pointer;text-align:center;font-weight:700;font-size:.9rem;border-right:1px solid var(--line)}
+.seg label:last-child{border-right:0}
+.seg label small{font-family:var(--mono);font-weight:400;font-size:.68rem;color:var(--muted)}
+.seg input{position:absolute;opacity:0;width:0;height:0}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.seg label:has(input:checked) small{color:var(--accent-ink);opacity:.8}
+.chips{display:flex;flex-wrap:wrap;gap:6px;position:relative}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:.85rem;cursor:pointer;background:var(--bg)}
+.chip input{position:absolute;opacity:0;width:0;height:0}
+.chip:has(input:checked){background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:8px 14px;font-weight:700}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{padding:4px 10px;font-size:.8rem;font-weight:500}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toast{font-size:.85rem;margin-top:8px;min-height:1.2em}
+.toast.ok{color:var(--ok)} .toast.bad{color:var(--bad)}
+
+.cars{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.car{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:8px;min-width:0}
+.car.pool{border-style:dashed}
+.car .head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.car .name{font-weight:900;font-size:1rem}
+.car .cap{font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.bar .drv{background:var(--sign)}
+.bar .rid{background:var(--accent)}
+.seats{display:flex;flex-direction:column;gap:4px;font-size:.88rem}
+.seat{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:6px;background:var(--panel);border:1px solid var(--line);min-width:0}
+.seat .who{font-weight:700;white-space:nowrap}
+.seat .extra{color:var(--muted);font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.seat.empty{border-style:dashed;color:var(--muted);background:transparent;justify-content:center;font-size:.78rem}
+.badge{font-family:var(--mono);font-size:.7rem;border-radius:4px;padding:1px 6px;border:1px solid currentColor;white-space:nowrap}
+.badge.ok{color:var(--ok)} .badge.warn{color:var(--warn)} .badge.bad{color:var(--bad)}
+.empty-state{color:var(--muted);font-size:.9rem;padding:14px;border:1px dashed var(--line);border-radius:8px;text-align:center}
+
+.ideas{display:flex;flex-direction:column;gap:8px}
+.idea{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);min-width:0}
+.idea .vote{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:.85rem;display:flex;flex-direction:column;align-items:center;min-width:48px}
+.idea .vote.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.idea .body{flex:1;min-width:0}
+.idea .text{font-weight:500;overflow-wrap:anywhere}
+.idea .by{font-size:.78rem;color:var(--muted)}
+.cat{font-family:var(--mono);font-size:.68rem;border-radius:4px;padding:1px 5px;background:var(--accent-soft);color:var(--fg);margin-right:6px}
+.idea-form{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;margin-bottom:12px}
+@media (max-width:520px){.idea-form{grid-template-columns:minmax(0,1fr)}}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+td.n{white-space:nowrap}
+tr.me td{background:var(--accent-soft)}
+details summary{cursor:pointer;font-weight:700;font-size:.9rem}
+details .inner{margin-top:10px}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="sign">
+    <div>
+      <h1>連假出遊乘車調度</h1>
+      <div class="sub">carpool scheduler · 14 nodes · 0 downtime</div>
+    </div>
+    <div class="meta">
+      <div><label for="tripName">目的地</label><input id="tripName" type="text" placeholder="例：宜蘭、台中、墾丁" maxlength="40"></div>
+      <div><label for="tripDate">出發日</label><input id="tripDate" type="text" placeholder="例：10/25（六）07:00" maxlength="40"></div>
+      <div><label for="tripTotal">總人數</label><input id="tripTotal" type="number" min="1" max="99" value="14" style="width:70px"></div>
+    </div>
+  </header>
+
+  <div id="modeBanner" class="banner" hidden></div>
+  <div id="sync" class="sync"><i></i><span id="syncText">連線中…</span></div>
+
+  <section class="stats" id="stats"></section>
+
+  <div class="grid">
+    <div>
+      <section class="panel" id="formPanel">
+        <h2>我的回覆 <span class="tag" id="formTag">POST /entries</span></h2>
+        <form id="entryForm" autocomplete="off">
+          <div class="field">
+            <label for="fName">名字</label>
+            <input id="fName" type="text" placeholder="大家認得的那個名字" maxlength="20" required>
+          </div>
+          <div class="field">
+            <label>你是 server 還是 client？</label>
+            <div class="seg">
+              <label><input type="radio" name="role" value="driver" id="roleDriver">我出車<small>host</small></label>
+              <label><input type="radio" name="role" value="passenger" id="rolePassenger" checked>我搭車<small>client</small></label>
+              <label><input type="radio" name="role" value="undecided" id="roleUndecided">還沒決定<small>pending</small></label>
+            </div>
+          </div>
+
+          <div id="driverFields" hidden>
+            <div class="field">
+              <label for="fSeats">車上總座位（含你自己）</label>
+              <input id="fSeats" type="number" min="2" max="9" value="5">
+              <span class="hint">一般轎車 5、休旅 7。國道高乘載管制要 3 人以上（含駕駛）。</span>
+            </div>
+            <div class="field">
+              <label for="fCar">車型／備註</label>
+              <input id="fCar" type="text" placeholder="例：白色 RAV4、後車廂很大、不能吃東西" maxlength="60">
+            </div>
+            <div class="field">
+              <label for="fFrom">出發地（哪裡集合）</label>
+              <input id="fFrom" type="text" placeholder="例：公司停車場、板橋車站" maxlength="40">
+            </div>
+          </div>
+
+          <div id="passengerFields">
+            <div class="field">
+              <label for="fPref">想搭誰的車</label>
+              <select id="fPref"><option value="">誰有位就上（load balancer 幫你排）</option></select>
+              <span class="hint">還沒有人出車的話先選「誰有位就上」，之後再改。</span>
+            </div>
+            <div class="field">
+              <label for="fPickup">你在哪裡上車</label>
+              <input id="fPickup" type="text" placeholder="例：中和、公司、台北車站" maxlength="40">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>車上角色（可複選）</label>
+            <div class="chips" id="roleChips">
+              <label class="chip"><input type="checkbox" value="DJ" id="chipDJ">🎧 車上 DJ</label>
+              <label class="chip"><input type="checkbox" value="導航" id="chipNav">🗺️ 人肉導航</label>
+              <label class="chip"><input type="checkbox" value="零食" id="chipSnack">🍿 零食供應商</label>
+              <label class="chip"><input type="checkbox" value="秒睡" id="chipSleep">😴 上車秒睡</label>
+              <label class="chip"><input type="checkbox" value="話癆" id="chipTalk">💬 陪聊防瞌睡</label>
+              <label class="chip"><input type="checkbox" value="攝影" id="chipPhoto">📸 隨車攝影</label>
+              <label class="chip"><input type="checkbox" value="輪流開" id="chipRelay">🔁 可輪流開</label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="fNote">一句話</label>
+            <input id="fNote" type="text" placeholder="例：會暈車要坐前面、我有 ETC 可以代扣" maxlength="80">
+          </div>
+          <div class="row">
+            <button type="submit" class="btn primary" id="saveBtn">送出回覆</button>
+            <button type="button" class="btn" id="resetBtn">清空重填</button>
+            <button type="button" class="btn" id="copyBtn" hidden>複製答案代碼</button>
+          </div>
+          <div class="toast" id="formToast"></div>
+          <div id="codeBox" hidden style="margin-top:8px">
+            <textarea id="codeOut" readonly rows="3" class="mono small"></textarea>
+            <div class="hint muted">把這串貼到群組，主辦人匯入就會出現在乘車板。</div>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <details id="importDetails">
+          <summary>主辦人工具：匯入答案代碼</summary>
+          <div class="inner">
+            <p class="small muted">有人網路怪怪的存不進去時，請他按「複製答案代碼」貼給你，整段貼進來，一次可貼多個。</p>
+            <textarea id="importIn" rows="4" placeholder="CP1:...."></textarea>
+            <div class="row" style="margin-top:8px">
+              <button type="button" class="btn" id="importBtn">匯入</button>
+              <span class="toast" id="importToast" style="margin:0"></span>
+            </div>
+          </div>
+        </details>
+      </section>
+    </div>
+
+    <div>
+      <section class="panel">
+        <h2>乘車板 <span class="tag">GET /cars</span></h2>
+        <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依出車順序補位。深綠是駕駛，綠色是乘客。要改就回左邊重送一次。</p>
+        <div class="cars" id="cars"></div>
+      </section>
+
+      <section class="panel">
+        <h2>行程提案 <span class="tag">GET /ideas</span></h2>
+        <p class="small muted" style="margin:0 0 10px">景點、吃的、活動、住宿都丟上來，大家投票。票數高的自動排前面。</p>
+        <form class="idea-form" id="ideaForm" autocomplete="off">
+          <input id="ideaText" type="text" placeholder="例：礁溪泡湯、羅東夜市吃包心粉圓" maxlength="80" required>
+          <select id="ideaCat">
+            <option value="景點">景點</option>
+            <option value="吃">吃</option>
+            <option value="活動">活動</option>
+            <option value="住宿">住宿</option>
+            <option value="其他">其他</option>
+          </select>
+          <button type="submit" class="btn primary">提案</button>
+        </form>
+        <div class="ideas" id="ideas"></div>
+      </section>
+
+      <section class="panel">
+        <h2>所有回覆 <span class="tag" id="entriesTag">0 rows</span></h2>
+        <div class="tablewrap">
+          <table id="entriesTable">
+            <thead><tr><th>名字</th><th>身份</th><th>細節</th><th>角色</th><th>一句話</th><th></th></tr></thead>
+            <tbody id="entriesBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 設定：Apps Script 網頁應用程式的 /exec 網址（部署後貼進來） =====
+const API_URL = "__API_URL__";
+const POLL_MS = 10000;
+</script>
+<script>
+(function(){
+  'use strict';
+  const $ = (s)=>document.querySelector(s);
+  const esc = (s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ROLE_LABEL = {driver:'出車', passenger:'搭車', undecided:'未定'};
+  const hasApi = /^https:\/\/script\.google\.com\//.test(API_URL);
+
+  // ---- state ----
+  const state = { entries:{}, ideas:{}, meta:{} };
+  let mode = hasApi ? 'api' : 'local';
+  let myEntryId = lsGet('carpool.myEntryId') || null;
+  let anonId = lsGet('carpool.anonId');
+  if(!anonId){ anonId = 'a_'+Math.random().toString(36).slice(2,10); lsSet('carpool.anonId', anonId); }
+
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function newId(p){ return p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+  // ---- local fallback store ----
+  function loadLocal(){ try{ const raw = lsGet('carpool.local'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch(e){} }
+  function saveLocal(){ lsSet('carpool.local', JSON.stringify(state)); }
+
+  // ---- API ----
+  function applyState(s){
+    if(!s || typeof s!=='object') return;
+    state.entries = s.entries||{}; state.ideas = s.ideas||{}; state.meta = s.meta||{};
+    renderMeta(); render();
+  }
+  function setSync(cls, text){ const el=$('#sync'); el.className='sync '+cls; $('#syncText').textContent=text; }
+  let fetching=false;
+  async function refresh(){
+    if(mode!=='api' || fetching) return;
+    fetching=true;
+    try{
+      const r = await fetch(API_URL+'?t='+Date.now(), {method:'GET', redirect:'follow'});
+      const j = await r.json();
+      applyState(j);
+      setSync('on', '已同步 '+new Date().toLocaleTimeString('zh-TW',{hour12:false})+' · 每 10 秒更新');
+    }catch(e){ console.error('refresh', e); setSync('err','讀不到共用資料，稍後會再試'); }
+    finally{ fetching=false; }
+  }
+  async function apiWrite(payload){
+    const r = await fetch(API_URL, {method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload)});
+    const j = await r.json();
+    if(!j || !j.ok) throw new Error((j&&j.error)||'伺服器拒絕');
+    if(j.state) applyState(j.state);
+    return j;
+  }
+  async function writeDoc(col, id, data){
+    if(mode==='api'){ await apiWrite({action:'set', col, id, data}); return; }
+    state[col][id] = data; saveLocal(); render();
+  }
+  async function deleteDoc(col, id){
+    if(mode==='api'){ await apiWrite({action:'delete', col, id}); return; }
+    delete state[col][id]; saveLocal(); render();
+  }
+
+  // ---- boot ----
+  (function boot(){
+    if(mode==='api'){
+      refresh();
+      setInterval(()=>{ if(document.visibilityState==='visible') refresh(); }, POLL_MS);
+      document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') refresh(); });
+    }else{
+      loadLocal(); renderMeta(); render(); setSync('', '離線模式：資料只在這台裝置');
+    }
+    updateBanner();
+  })();
+
+  function updateBanner(){
+    const b = $('#modeBanner');
+    if(mode==='api'){ b.hidden = true; $('#copyBtn').hidden = true; return; }
+    b.hidden = false; b.className = 'banner warn'; $('#copyBtn').hidden = false;
+    b.textContent = '這個頁面還沒設定共用後端。你填的內容只存在這台裝置；填完按「複製答案代碼」貼到群組，主辦人匯入就會進乘車板。';
+  }
+
+  // ---- meta ----
+  let metaTimer = null;
+  function renderMeta(){
+    const m = state.meta || {};
+    if(document.activeElement !== $('#tripName')) $('#tripName').value = m.name || '';
+    if(document.activeElement !== $('#tripDate')) $('#tripDate').value = m.date || '';
+    if(document.activeElement !== $('#tripTotal')) $('#tripTotal').value = m.total || 14;
+  }
+  function totalPeople(){ const n = parseInt(state.meta && state.meta.total, 10); return (n>0 ? n : 14); }
+  ['#tripName','#tripDate','#tripTotal'].forEach(sel=>{
+    $(sel).addEventListener('input', ()=>{
+      clearTimeout(metaTimer);
+      metaTimer = setTimeout(async ()=>{
+        const data = { name: $('#tripName').value.trim(), date: $('#tripDate').value.trim(), total: parseInt($('#tripTotal').value,10)||14 };
+        const cur = state.meta||{};
+        if(cur.name===data.name && cur.date===data.date && cur.total===data.total) return;
+        try{ await writeDoc('meta', 'trip', data); }catch(e){ console.error(e); }
+      }, 800);
+    });
+  });
+
+  // ---- form ----
+  const form = $('#entryForm');
+  function role(){ return form.querySelector('input[name=role]:checked').value; }
+  function syncRoleFields(){
+    const r = role();
+    $('#driverFields').hidden = r!=='driver';
+    $('#passengerFields').hidden = r!=='passenger';
+    $('#formTag').textContent = myEntryId ? 'PUT /entries/'+myEntryId.slice(-4) : 'POST /entries';
+  }
+  form.querySelectorAll('input[name=role]').forEach(r=>r.addEventListener('change', syncRoleFields));
+  syncRoleFields();
+
+  function readForm(){
+    const r = role();
+    const chips = [...$('#roleChips').querySelectorAll('input:checked')].map(i=>i.value);
+    return {
+      name: $('#fName').value.trim(),
+      role: r,
+      seats: r==='driver' ? Math.max(2, Math.min(9, parseInt($('#fSeats').value,10)||5)) : null,
+      car: r==='driver' ? $('#fCar').value.trim() : '',
+      from: r==='driver' ? $('#fFrom').value.trim() : '',
+      pref: r==='passenger' ? $('#fPref').value : '',
+      pickup: r==='passenger' ? $('#fPickup').value.trim() : '',
+      tags: chips,
+      note: $('#fNote').value.trim(),
+    };
+  }
+  function fillForm(e){
+    $('#fName').value = e.name||'';
+    form.querySelector('input[name=role][value="'+(e.role||'passenger')+'"]').checked = true;
+    $('#fSeats').value = e.seats||5; $('#fCar').value = e.car||''; $('#fFrom').value = e.from||'';
+    $('#fPickup').value = e.pickup||''; $('#fNote').value = e.note||'';
+    $('#roleChips').querySelectorAll('input').forEach(i=>{ i.checked = (e.tags||[]).includes(i.value); });
+    renderPrefOptions(); $('#fPref').value = e.pref||'';
+    syncRoleFields();
+  }
+  function toast(sel, msg, cls){ const t=$(sel); t.textContent=msg; t.className='toast '+(cls||''); }
+
+  form.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const data = readForm();
+    if(!data.name){ toast('#formToast','名字要填，不然不知道誰上車。','bad'); return; }
+    const id = myEntryId || newId('e');
+    const prev = state.entries[id] || {};
+    const body = Object.assign({}, data, { anon: anonId, createdAt: prev.createdAt||Date.now(), updatedAt: Date.now() });
+    $('#saveBtn').disabled = true; toast('#formToast','送出中…','');
+    try{
+      await writeDoc('entries', id, body);
+      myEntryId = id; lsSet('carpool.myEntryId', id); syncRoleFields();
+      toast('#formToast', mode==='api' ? '201 Created — 已存到共用板，大家都看得到。' : '已存在這台裝置。按「複製答案代碼」貼到群組。', 'ok');
+      if(mode==='local') showCode(body, id);
+    }catch(e){
+      toast('#formToast','存不進去：'+(e&&e.message||e)+'。先用「複製答案代碼」。','bad'); $('#copyBtn').hidden=false; showCode(body, id);
+    }finally{ $('#saveBtn').disabled = false; }
+  });
+  $('#resetBtn').addEventListener('click', ()=>{ form.reset(); $('#fSeats').value=5; syncRoleFields(); toast('#formToast','',''); $('#codeBox').hidden = true; });
+  $('#copyBtn').addEventListener('click', ()=>{
+    const data = readForm(); if(!data.name){ toast('#formToast','先填名字。','bad'); return; }
+    const id = myEntryId || newId('e'); myEntryId = id; lsSet('carpool.myEntryId', id);
+    showCode(Object.assign({}, data, {anon:anonId, createdAt:Date.now(), updatedAt:Date.now()}), id, true);
+  });
+  function showCode(body, id, copy){
+    const code = 'CP1:'+btoa(unescape(encodeURIComponent(JSON.stringify({id, body}))));
+    $('#codeBox').hidden = false; const out = $('#codeOut'); out.value = code;
+    if(copy && navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(()=>toast('#formToast','代碼已複製，貼到群組給主辦人。','ok')).catch(()=>{ out.focus(); out.select(); toast('#formToast','請手動全選複製下面的代碼。',''); });
+    }
+  }
+
+  // ---- import ----
+  $('#importBtn').addEventListener('click', async ()=>{
+    const txt = $('#importIn').value;
+    const codes = txt.match(/CP1:[A-Za-z0-9+/=]+/g) || [];
+    if(!codes.length){ toast('#importToast','沒看到 CP1: 開頭的代碼。','bad'); return; }
+    let ok=0, fail=[];
+    for(const c of codes){
+      try{
+        const obj = JSON.parse(decodeURIComponent(escape(atob(c.slice(4)))));
+        if(!obj.id || !obj.body || !obj.body.name) throw new Error('格式不對');
+        const body = Object.assign({}, obj.body, { importedAt: Date.now(), updatedAt: Date.now() });
+        await writeDoc('entries', String(obj.id).replace(/[^A-Za-z0-9_\-.~:@+]/g,''), body); ok++;
+      }catch(e){ fail.push((e&&e.message)||'解析失敗'); }
+    }
+    toast('#importToast', '匯入 '+ok+' 筆'+(fail.length?'，失敗 '+fail.length+' 筆：'+fail.join('；'):'。'), fail.length?'bad':'ok');
+    if(ok) $('#importIn').value='';
+  });
+
+  // ---- assignment ----
+  function entriesList(){ return Object.entries(state.entries).map(([id,e])=>Object.assign({id}, e)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)); }
+  function assign(){
+    const all = entriesList();
+    const drivers = all.filter(e=>e.role==='driver');
+    const passengers = all.filter(e=>e.role==='passenger');
+    const undecided = all.filter(e=>e.role==='undecided');
+    const cars = drivers.map(d=>({ driver:d, riders:[], cap: Math.max(1,(d.seats||5)-1) }));
+    const byId = Object.fromEntries(cars.map(c=>[c.driver.id,c]));
+    const waiting = [];
+    passengers.forEach(p=>{
+      const c = p.pref && byId[p.pref];
+      if(c && c.riders.length < c.cap){ c.riders.push(Object.assign({}, p, {pinned:true})); }
+      else waiting.push(Object.assign({}, p, { reason: p.pref ? (byId[p.pref] ? '指定的車滿了' : '指定的人沒出車') : '' }));
+    });
+    const unassigned = [];
+    waiting.forEach(p=>{
+      const c = cars.find(c=>c.riders.length < c.cap);
+      if(c) c.riders.push(p); else unassigned.push(p);
+    });
+    return { cars, unassigned, undecided, all, drivers, passengers };
+  }
+
+  // ---- render ----
+  function renderPrefOptions(){
+    const sel = $('#fPref'); const cur = sel.value;
+    const drivers = entriesList().filter(e=>e.role==='driver' && e.id!==myEntryId);
+    sel.innerHTML = '<option value="">誰有位就上（load balancer 幫你排）</option>' +
+      drivers.map(d=>'<option value="'+esc(d.id)+'">'+esc(d.name)+'（'+esc(d.car||'車')+'，'+(d.seats||5)+' 座'+(d.from?'，'+esc(d.from)+'出發':'')+'）</option>').join('');
+    if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  }
+
+  function render(){
+    renderPrefOptions();
+    const A = assign();
+    const total = totalPeople();
+    const filled = A.all.length;
+    const seats = A.cars.reduce((s,c)=>s+c.cap+1,0);
+    const demand = Math.max(total, filled);
+    const shortage = demand - seats;
+    let code, codeCls, codeText;
+    if(filled===0){ code='204'; codeCls='warn'; codeText='還沒有人回覆'; }
+    else if(A.drivers.length===0){ code='503'; codeCls='bad'; codeText='還沒人出車'; }
+    else if(shortage>0){ code='503'; codeCls='bad'; codeText='座位不足，缺 '+shortage+' 個（約再 '+Math.ceil(shortage/4)+' 台車）'; }
+    else if(filled<total){ code='202'; codeCls='warn'; codeText='座位夠了，還在等 '+(total-filled)+' 人回覆'; }
+    else if(A.unassigned.length){ code='409'; codeCls='warn'; codeText='有人指定的車滿了，要喬一下'; }
+    else { code='200'; codeCls='ok'; codeText='全員上車，可以部署了'; }
+    const hov = A.cars.filter(c=>c.riders.length+1>=3).length;
+    $('#stats').innerHTML = `
+      <div class="stat"><div class="k">status</div><div class="v"><span class="code ${codeCls}">${code}</span></div><div class="small muted" style="margin-top:4px">${esc(codeText)}</div></div>
+      <div class="stat"><div class="k">已回覆</div><div class="v">${filled}<small> / ${total} 人</small></div></div>
+      <div class="stat"><div class="k">出車</div><div class="v">${A.drivers.length}<small> 台 · ${seats} 座</small></div></div>
+      <div class="stat"><div class="k">待分配</div><div class="v">${A.unassigned.length}<small> 人 · 未定 ${A.undecided.length}</small></div></div>
+      <div class="stat"><div class="k">高乘載（≥3 人）</div><div class="v">${hov}<small> / ${A.cars.length} 台</small></div></div>`;
+
+    const carsEl = $('#cars');
+    if(!A.all.length){
+      carsEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1">還沒有人回覆。左邊填一下名字跟你要出車還是搭車，第一台車就會出現在這裡。</div>';
+    }else{
+      const carHtml = A.cars.map(c=>{
+        const occ = c.riders.length+1, seatsN = c.cap+1;
+        const pct = 100/seatsN;
+        const hovOk = occ>=3;
+        const d = c.driver;
+        return `<div class="car">
+          <div class="head"><div class="name">${esc(d.name)} 的車</div><div class="cap">${occ}/${seatsN}</div></div>
+          <div class="small muted" style="overflow-wrap:anywhere">${esc(d.car||'')}${d.from?(d.car?' · ':'')+esc(d.from)+' 出發':''}</div>
+          <div class="bar"><i class="drv" style="width:${pct}%"></i><i class="rid" style="width:${pct*c.riders.length}%"></i></div>
+          <div class="row"><span class="badge ${hovOk?'ok':'warn'}">${hovOk?'高乘載 OK':'高乘載差 '+(3-occ)+' 人'}</span>${c.riders.length>=c.cap?'<span class="badge bad">FULL</span>':''}</div>
+          <div class="seats">
+            <div class="seat"><span class="who">🚗 ${esc(d.name)}</span><span class="extra">${esc((d.tags||[]).join('·'))}</span></div>
+            ${c.riders.map(p=>`<div class="seat"><span class="who">${esc(p.name)}</span><span class="extra">${p.pinned?'指定 · ':''}${esc(p.pickup||'')}${p.tags&&p.tags.length?' · '+esc(p.tags.join('·')):''}</span></div>`).join('')}
+            ${Array.from({length:Math.max(0,c.cap-c.riders.length)}).map(()=>'<div class="seat empty">空位</div>').join('')}
+          </div>
+        </div>`;
+      }).join('');
+      const poolHtml = (A.unassigned.length||A.undecided.length) ? `<div class="car pool">
+          <div class="head"><div class="name">候車區</div><div class="cap">${A.unassigned.length+A.undecided.length}</div></div>
+          <div class="small muted">還沒上到車的人。缺車就找人出車，或改指定。</div>
+          <div class="seats">
+            ${A.unassigned.map(p=>`<div class="seat"><span class="who">${esc(p.name)}</span><span class="extra">${esc(p.reason||'等車位')}${p.pickup?' · '+esc(p.pickup):''}</span></div>`).join('')}
+            ${A.undecided.map(p=>`<div class="seat"><span class="who">${esc(p.name)}</span><span class="extra">還沒決定</span></div>`).join('')}
+          </div></div>` : '';
+      carsEl.innerHTML = carHtml + poolHtml;
+    }
+
+    const ideas = Object.entries(state.ideas).map(([id,i])=>Object.assign({id},i)).sort((a,b)=>((b.votes||[]).length-(a.votes||[]).length)||((a.createdAt||0)-(b.createdAt||0)));
+    const me = anonId;
+    $('#ideas').innerHTML = ideas.length ? ideas.map(i=>{
+      const v = i.votes||[]; const on = v.includes(me);
+      return `<div class="idea"><button type="button" class="vote ${on?'on':''}" data-vote="${esc(i.id)}" aria-pressed="${on}"><span>▲</span><span>${v.length}</span></button>
+        <div class="body"><div class="text"><span class="cat">${esc(i.cat||'其他')}</span>${esc(i.text)}</div><div class="by">${esc(i.by||'匿名')} 提的${(me===i.anon)?' · <button type="button" class="btn sm" data-delidea="'+esc(i.id)+'">刪除</button>':''}</div></div></div>`;
+    }).join('') : '<div class="empty-state">還沒有提案。想去哪、想吃什麼，先丟一個。</div>';
+
+    $('#entriesTag').textContent = A.all.length+' rows';
+    $('#entriesBody').innerHTML = A.all.map(e=>{
+      const detail = e.role==='driver' ? (e.seats||5)+' 座'+(e.car?' · '+esc(e.car):'')+(e.from?' · '+esc(e.from)+'出發':'')
+        : e.role==='passenger' ? (e.pref ? '想搭 '+esc((state.entries[e.pref]||{}).name||'（已不出車）') : '誰有位就上')+(e.pickup?' · '+esc(e.pickup)+'上車':'')
+        : '—';
+      return `<tr class="${e.id===myEntryId?'me':''}"><td class="n">${esc(e.name)}</td><td class="n">${ROLE_LABEL[e.role]||e.role}</td><td>${detail}</td><td>${esc((e.tags||[]).join('、'))}</td><td>${esc(e.note||'')}</td>
+        <td class="n"><button type="button" class="btn sm" data-edit="${esc(e.id)}">編輯</button> <button type="button" class="btn sm danger" data-del="${esc(e.id)}">刪除</button></td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="muted">還沒有資料</td></tr>';
+  }
+
+  // ---- actions ----
+  let pendingDel = null;
+  document.addEventListener('click', async (ev)=>{
+    const b = ev.target.closest('button'); if(!b) return;
+    if(b.dataset.edit){
+      const e = state.entries[b.dataset.edit]; if(!e) return;
+      myEntryId = b.dataset.edit; lsSet('carpool.myEntryId', myEntryId); fillForm(e);
+      $('#formPanel').scrollIntoView({behavior:'smooth',block:'start'}); toast('#formToast','已載入 '+e.name+' 的回覆，改完按送出。','');
+    }
+    if(b.dataset.del){
+      const id = b.dataset.del;
+      if(pendingDel!==id){ pendingDel=id; b.textContent='確定刪？'; setTimeout(()=>{ if(pendingDel===id){ pendingDel=null; render(); } },3000); return; }
+      pendingDel=null;
+      try{ await deleteDoc('entries', id); if(myEntryId===id){ myEntryId=null; lsSet('carpool.myEntryId',''); syncRoleFields(); } }
+      catch(e){ toast('#formToast','刪不掉：'+(e&&e.message||e),'bad'); }
+    }
+    if(b.dataset.vote){
+      const id = b.dataset.vote; const i = state.ideas[id]; if(!i) return;
+      const votes = (i.votes||[]).slice();
+      const k = votes.indexOf(anonId); if(k>=0) votes.splice(k,1); else votes.push(anonId);
+      b.disabled = true;
+      try{ await writeDoc('ideas', id, Object.assign({}, i, {votes})); }catch(e){ console.error(e); b.disabled=false; }
+    }
+    if(b.dataset.delidea){
+      try{ await deleteDoc('ideas', b.dataset.delidea); }catch(e){ console.error(e); }
+    }
+  });
+
+  $('#ideaForm').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const text = $('#ideaText').value.trim(); if(!text) return;
+    const by = ($('#fName').value.trim()) || ((state.entries[myEntryId]||{}).name) || '匿名';
+    try{
+      await writeDoc('ideas', newId('i'), { text, cat: $('#ideaCat').value, by, anon: anonId, votes:[anonId], createdAt: Date.now() });
+      $('#ideaText').value='';
+    }catch(e){ console.error(e); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
