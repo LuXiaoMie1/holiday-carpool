@@ -288,6 +288,12 @@ details .inner{margin-top:10px}
             <option value="3">3 小時</option>
             <option value="4">4 小時</option>
             <option value="6">6 小時</option>
+            <option value="8">8 小時</option>
+            <option value="12">12 小時</option>
+            <option value="16">16 小時</option>
+            <option value="18">18 小時</option>
+            <option value="20">20 小時</option>
+            <option value="24">24 小時</option>
           </select>
           <button type="submit" class="btn primary">提案</button>
         </form>
@@ -566,7 +572,7 @@ const POLL_MS = 10000;
 
   // ---- 行程時間軸 ----
   const TL = { t0: 6, t1: 30, days: [[1,'第一天','出發'],[2,'第二天','回程']] };
-  const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'],[2,'2 小時'],[3,'3 小時'],[4,'4 小時'],[6,'6 小時']];
+  const DUR_OPTS = [[0.5,'30 分'],[1,'1 小時'],[1.5,'1.5 小時'],[2,'2 小時'],[3,'3 小時'],[4,'4 小時'],[6,'6 小時'],[8,'8 小時'],[12,'12 小時'],[16,'16 小時'],[18,'18 小時'],[20,'20 小時'],[24,'24 小時']];
   const hhmm = (h)=>{ const H=Math.floor(h), M=Math.round((h-H)*60); return (H>=24?'翌日 ':'')+String(H%24).padStart(2,'0')+':'+String(M).padStart(2,'0'); };
   function startHour(i){ const m=/^(\d{1,2}):(\d{2})$/.exec(i.start||''); if(!m) return null; const h=(+m[1])+(+m[2])/60; return h<TL.t0 ? h+24 : h; } // 早於 06:00 視為當天夜裡延續到隔天凌晨
   function renderIdeas(){
@@ -575,17 +581,21 @@ const POLL_MS = 10000;
     const maxV = Math.max(1, ...all.map(i=>(i.votes||[]).length));
     const span = TL.t1 - TL.t0;
     const ticks = []; for(let h=TL.t0; h<=TL.t1; h+=2) ticks.push(`<div class="tl-tick" style="left:${(h-TL.t0)/span*100}%"><span>${String(h%24).padStart(2,'0')}</span></div>`);
+    // 每筆拆成當天的格子；超過隔天 06:00（TL.t1）的部分再接一格到下一天軌道（cont=true）
+    const placed = [];
+    all.filter(i=>+i.day>0 && startHour(i)!=null).forEach(i=>{
+      const s = startHour(i), e = s + (+i.dur||1.5);
+      placed.push(Object.assign({}, i, { day:+i.day, st:Math.max(TL.t0,s), en:Math.min(TL.t1,e), cont:false }));
+      if(e>TL.t1) placed.push(Object.assign({}, i, { day:+i.day+1, st:TL.t0, en:Math.min(TL.t1,e-24), cont:true }));
+    });
     $('#timeline').innerHTML = TL.days.map(([d,label,sub])=>{
-      const items = all.filter(i=>+i.day===d && startHour(i)!=null).map(i=>{
-        const st = Math.max(TL.t0, startHour(i)); const en = Math.min(TL.t1, startHour(i) + (+i.dur||1.5));
-        return Object.assign({st, en}, i);
-      }).filter(i=>i.en>i.st).sort((a,b)=>a.st-b.st || b.en-a.en);
+      const items = placed.filter(i=>i.day===d && i.en>i.st).sort((a,b)=>a.st-b.st || b.en-a.en);
       const laneEnd = [];
       items.forEach(i=>{ let k = laneEnd.findIndex(e=>e<=i.st); if(k<0){ k=laneEnd.length; laneEnd.push(0); } laneEnd[k]=i.en; i.lane=k; });
       const blocks = items.map(i=>{
         const v=(i.votes||[]).length, on=(i.votes||[]).includes(me);
         const heat = Math.round(25 + 65*Math.min(1, v/maxV));
-        return `<button type="button" class="tl-block c-${esc(i.cat||'其他')} ${on?'on':''}" data-vote="${esc(i.id)}" style="left:${(i.st-TL.t0)/span*100}%;width:${(i.en-i.st)/span*100}%;top:${22+i.lane*34}px;--heat:${heat}%" title="${esc(i.text)} ${hhmm(i.st)}–${hhmm(i.en)}，${v} 票（點一下投票）"><span style="overflow:hidden;text-overflow:ellipsis">${esc(i.text)}</span><span class="n">${v}</span></button>`;
+        return `<button type="button" class="tl-block c-${esc(i.cat||'其他')} ${on?'on':''}" data-vote="${esc(i.id)}" style="left:${(i.st-TL.t0)/span*100}%;width:${(i.en-i.st)/span*100}%;top:${22+i.lane*34}px;--heat:${heat}%" title="${esc(i.text)} ${hhmm(i.st)}–${hhmm(i.en)}，${v} 票（點一下投票）"><span style="overflow:hidden;text-overflow:ellipsis">${i.cont?'（續）':''}${esc(i.text)}</span><span class="n">${v}</span></button>`;
       }).join('');
       const lanes = Math.max(1, laneEnd.length);
       return `<div class="tl-day"><div class="tl-label">${label}<small>${sub}</small></div><div class="tl-scroll"><div class="tl-track" style="--lanes:${lanes}">${ticks.join('')}${blocks || '<div class="tl-empty">還沒有排進來的行程</div>'}</div></div></div>`;
