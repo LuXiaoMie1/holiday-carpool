@@ -251,7 +251,7 @@ details .inner{margin-top:10px}
 
     <div>
       <section class="panel">
-        <h2>乘車板 <span class="tag">GET /cars</span></h2>
+        <h2>乘車板 <span class="tag">GET /cars</span><button type="button" class="btn sm" id="shareBtn" style="margin-left:auto">複製分享連結</button></h2>
         <p class="small muted" style="margin:0 0 12px">指定司機優先配，其餘依出車順序補位。深綠是駕駛，綠色是乘客。要改就回左邊重送一次。</p>
         <div class="cars" id="cars"></div>
       </section>
@@ -313,6 +313,25 @@ const POLL_MS = 10000;
   // ---- local fallback store ----
   function loadLocal(){ try{ const raw = lsGet('carpool.local'); if(raw){ Object.assign(state, JSON.parse(raw)); } }catch(e){} }
   function saveLocal(){ lsSet('carpool.local', JSON.stringify(state)); }
+  const b64e = (str)=>btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const b64d = (b)=>decodeURIComponent(escape(atob(b.replace(/-/g,'+').replace(/_/g,'/'))));
+  function shareLink(){ return location.origin+location.pathname+'#s='+b64e(JSON.stringify({entries:state.entries, ideas:state.ideas, meta:state.meta})); }
+  // 從網址 #s= 載入別人分享的板：同一筆以較新的為準
+  function importFromHash(){
+    const m = /[#&]s=([A-Za-z0-9_\-]+)/.exec(location.hash||''); if(!m) return 0;
+    let inc; try{ inc = JSON.parse(b64d(m[1])); }catch(e){ return 0; }
+    let n=0;
+    ['entries','ideas'].forEach(col=>{
+      Object.entries(inc[col]||{}).forEach(([id,d])=>{
+        const cur = state[col][id]; const t = (x)=>(x&&(x.updatedAt||x.createdAt))||0;
+        if(!cur || t(d)>=t(cur)){ state[col][id]=d; n++; }
+      });
+    });
+    if(inc.meta && (inc.meta.name||inc.meta.date||inc.meta.total)) state.meta = inc.meta;
+    saveLocal();
+    try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+    return n;
+  }
 
   // ---- API ----
   function applyState(s){
@@ -356,7 +375,10 @@ const POLL_MS = 10000;
       setInterval(()=>{ if(document.visibilityState==='visible') refresh(); }, POLL_MS);
       document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') refresh(); });
     }else{
-      loadLocal(); renderMeta(); render(); setSync('', '離線模式：資料只在這台裝置');
+      loadLocal();
+      const n = importFromHash();
+      renderMeta(); render();
+      setSync('', n>0 ? '已從分享連結載入 '+n+' 筆，資料存在這台裝置' : '資料存在這台裝置；按「複製分享連結」把目前的板分享出去');
     }
     updateBanner();
   })();
@@ -457,6 +479,13 @@ const POLL_MS = 10000;
       navigator.clipboard.writeText(code).then(()=>toast('#formToast','代碼已複製，貼到群組給主辦人。','ok')).catch(()=>{ out.focus(); out.select(); toast('#formToast','請手動全選複製下面的代碼。',''); });
     }
   }
+
+  $('#shareBtn').addEventListener('click', ()=>{
+    const url = shareLink();
+    const done = ()=>setSync('on','分享連結已複製，貼到群組大家就看得到目前的板');
+    if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(done).catch(()=>{ window.prompt('複製這個連結：', url); }); }
+    else window.prompt('複製這個連結：', url);
+  });
 
   // ---- import ----
   $('#importBtn').addEventListener('click', async ()=>{
