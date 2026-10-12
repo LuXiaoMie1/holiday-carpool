@@ -160,7 +160,8 @@ details .inner{margin-top:10px}
   <div class="grid">
     <div>
       <section class="panel" id="formPanel">
-        <h2>我的回覆 <span class="tag" id="formTag">POST /entries</span></h2>
+        <h2>填回覆 <span class="tag" id="formTag">POST /entries</span></h2>
+        <p class="small muted" style="margin:0 0 12px">自己填，或主辦人幫大家填：存一筆就自動清空接著填下一位。要改誰的就在右下「所有回覆」按編輯。</p>
         <form id="entryForm" autocomplete="off">
           <div class="field">
             <label for="fName">名字</label>
@@ -237,7 +238,7 @@ details .inner{margin-top:10px}
         <details id="importDetails">
           <summary>主辦人工具：匯入答案代碼</summary>
           <div class="inner">
-            <p class="small muted">有人網路怪怪的存不進去時，請他按「複製答案代碼」貼給你，整段貼進來，一次可貼多個。</p>
+            <p class="small muted">別人在自己手機上填完按「複製答案代碼」貼給你，整段貼進來，一次可貼多個，就會進你的乘車板。</p>
             <textarea id="importIn" rows="4" placeholder="CP1:...."></textarea>
             <div class="row" style="margin-top:8px">
               <button type="button" class="btn" id="importBtn">匯入</button>
@@ -363,8 +364,8 @@ const POLL_MS = 10000;
   function updateBanner(){
     const b = $('#modeBanner');
     if(mode==='api'){ b.hidden = true; $('#copyBtn').hidden = true; return; }
-    b.hidden = false; b.className = 'banner warn'; $('#copyBtn').hidden = false;
-    b.textContent = '這個頁面還沒設定共用後端。你填的內容只存在這台裝置；填完按「複製答案代碼」貼到群組，主辦人匯入就會進乘車板。';
+    b.hidden = false; b.className = 'banner'; $('#copyBtn').hidden = false;
+    b.textContent = '目前資料只存在這台裝置的瀏覽器（主辦人自己填全部的話這樣就夠用）。要讓大家各自在手機上填，再照 README 接上 Google 試算表後端。';
   }
 
   // ---- meta ----
@@ -436,9 +437,9 @@ const POLL_MS = 10000;
     $('#saveBtn').disabled = true; toast('#formToast','送出中…','');
     try{
       await writeDoc('entries', id, body);
-      myEntryId = id; lsSet('carpool.myEntryId', id); syncRoleFields();
-      toast('#formToast', mode==='api' ? '201 Created — 已存到共用板，大家都看得到。' : '已存在這台裝置。按「複製答案代碼」貼到群組。', 'ok');
-      if(mode==='local') showCode(body, id);
+      form.reset(); $('#fSeats').value=5; myEntryId=null; lsSet('carpool.myEntryId',''); syncRoleFields();
+      toast('#formToast', '已存：'+body.name+'（'+ROLE_LABEL[body.role]+'）。可以接著填下一位。', 'ok');
+      $('#fName').focus();
     }catch(e){
       toast('#formToast','存不進去：'+(e&&e.message||e)+'。先用「複製答案代碼」。','bad'); $('#copyBtn').hidden=false; showCode(body, id);
     }finally{ $('#saveBtn').disabled = false; }
